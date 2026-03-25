@@ -4,7 +4,7 @@
  * Loaded at 0x82200000 and runs in System mode under the bare-metal OS.
  */
 
-#include "../stdio.h"
+#include "stdio.h"
 
 void main(void)
 {

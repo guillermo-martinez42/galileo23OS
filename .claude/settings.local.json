@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "Bash(mv stdio.c lib/)",
+      "Bash(mv string.c lib/)",
+      "Bash(mv stdio.h include/)",
+      "Bash(mv string.h include/)",
+      "Bash(mv os.ld os_qemu.ld p1.ld p1_qemu.ld p2.ld p2_qemu.ld ldscripts/)"
+    ]
+  }
+}

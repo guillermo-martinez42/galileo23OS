@@ -95,3 +95,9 @@ The two processes are interleaved by a ~1-second DMTimer2 interrupt:
 | `os.ld`    | Linker script — OS at `0x82000000`                                |
 | `p1.ld`    | Linker script — P1 at `0x82100000`                                |
 | `p2.ld`    | Linker script — P2 at `0x82200000`                                |
+
+---
+
+## Project Structure
+
+This project follows the **Linux-Lite Structure**, a subsystem-based source layout modelled after the Linux kernel's directory conventions. Rather than grouping all code in a flat root directory, each concern lives in its own folder: `boot/` for startup assembly, `core/` for the scheduler and process management, `drivers/` for hardware-specific peripheral code organised by platform, `lib/` for shared utilities, `usr/` for unprivileged user processes, `ldscripts/` for linker scripts, and `include/` for all shared headers. This separation ensures that hardware knowledge never leaks into the scheduler, that user-process code cannot accidentally reference kernel internals, and that adding a new target platform only requires adding a new subdirectory under `drivers/`.
