@@ -24,17 +24,17 @@ Stop U-Boot at the prompt by pressing any key during boot.
 Load each binary at its fixed address using Y-Modem (`loady`):
 
 ```
-=> loady 0x82000000
+=> loadx 0x82000000
 ```
 *(Send `os.bin` from your terminal's Y-Modem upload dialog)*
 
 ```
-=> loady 0x82100000
+=> loadx 0x82100000
 ```
 *(Send `p1.bin`)*
 
 ```
-=> loady 0x82200000
+=> loadx 0x82200000
 ```
 *(Send `p2.bin`)*
 
