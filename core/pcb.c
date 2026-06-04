@@ -1,57 +1,64 @@
 /*
- * core/pcb.c - Process Control Block management
- *
- * Owns the PCB array and populates it with the fixed load addresses
- * defined by the per-platform linker scripts in ldscripts/.
+ * core/pcb.c - Process Control Block management (Phase 2)
  *
  *   BBB  (os.ld)      : P1 @ 0x82100000,  P2 @ 0x82200000
  *   QEMU (os_qemu.ld) : P1 @ 0x40100000,  P2 @ 0x40200000
+ *
+ * Phase 2: tasks start in USR mode (CPSR = 0x10, F masked, I clear).
+ * user_base/user_size describe the inclusive range that sys_write
+ * pointer validation accepts (text + stack of the task image).
  */
 
 #include "sched.h"
 
-pcb_t pcb[3];          /* [0]=OS (unused), [1]=P1, [2]=P2 */
+pcb_t pcb[N_PCB];
 int   current_process = 1;
 
-void pcb_init(void)
+#ifdef QEMU
+  #define P1_BASE  0x40100000U
+  #define P1_TOP   0x40112000U   /* end of P1 stack (exclusive)  */
+  #define P2_BASE  0x40200000U
+  #define P2_TOP   0x40212000U
+#else
+  #define P1_BASE  0x82100000U
+  #define P1_TOP   0x82112000U
+  #define P2_BASE  0x82200000U
+  #define P2_TOP   0x82212000U
+#endif
+
+/* USR mode, FIQ masked, IRQ enabled, ARM state */
+#define USR_CPSR  0x50U
+
+static void init_user_pcb(int idx,
+                          unsigned int pid,
+                          unsigned int base,
+                          unsigned int top)
 {
     int i;
 
-#ifdef QEMU
-    /* P1 — prints digits 0-9 */
-    pcb[1].pid   = 1;
-    pcb[1].pc    = 0x40100000U;   /* Entry point  (p1_qemu.ld) */
-    pcb[1].sp    = 0x40112000U;   /* Top of P1 stack           */
-    pcb[1].lr    = 0x40100000U;
-    pcb[1].cpsr  = 0x1FU;         /* System mode, IRQs on      */
-    pcb[1].state = READY;
-    for (i = 0; i < 13; i++) pcb[1].regs[i] = 0U;
+    pcb[idx].pid        = pid;
+    pcb[idx].pc         = base;          /* entry point          */
+    pcb[idx].sp         = top;           /* top of stack         */
+    pcb[idx].lr         = base;          /* return-to-self trap  */
+    pcb[idx].cpsr       = USR_CPSR;
+    pcb[idx].state      = READY;
+    pcb[idx].user_base  = base;
+    pcb[idx].user_size  = top - base;
+    pcb[idx].syscall_id = 0U;
+    pcb[idx].fault      = FAULT_NONE;
+    pcb[idx].fault_pc   = 0U;
+    pcb[idx].fault_addr = 0U;
+    pcb[idx].exit_code  = 0;
+    for (i = 0; i < 13; i++)
+        pcb[idx].regs[i] = 0U;
+}
 
-    /* P2 — prints letters a-z */
-    pcb[2].pid   = 2;
-    pcb[2].pc    = 0x40200000U;   /* Entry point  (p2_qemu.ld) */
-    pcb[2].sp    = 0x40212000U;   /* Top of P2 stack           */
-    pcb[2].lr    = 0x40200000U;
-    pcb[2].cpsr  = 0x1FU;
-    pcb[2].state = READY;
-    for (i = 0; i < 13; i++) pcb[2].regs[i] = 0U;
-#else
-    /* P1 — prints digits 0-9 */
-    pcb[1].pid   = 1;
-    pcb[1].pc    = 0x82100000U;   /* Entry point  (p1.ld)      */
-    pcb[1].sp    = 0x82112000U;   /* Top of P1 stack           */
-    pcb[1].lr    = 0x82100000U;
-    pcb[1].cpsr  = 0x1FU;         /* System mode, IRQs on      */
-    pcb[1].state = READY;
-    for (i = 0; i < 13; i++) pcb[1].regs[i] = 0U;
+void pcb_init(void)
+{
+    /* Slot 0 is reserved (kernel/idle); zero it for cleanliness. */
+    pcb[0].pid   = 0U;
+    pcb[0].state = TERMINATED;
 
-    /* P2 — prints letters a-z */
-    pcb[2].pid   = 2;
-    pcb[2].pc    = 0x82200000U;   /* Entry point  (p2.ld)      */
-    pcb[2].sp    = 0x82212000U;   /* Top of P2 stack           */
-    pcb[2].lr    = 0x82200000U;
-    pcb[2].cpsr  = 0x1FU;
-    pcb[2].state = READY;
-    for (i = 0; i < 13; i++) pcb[2].regs[i] = 0U;
-#endif
+    init_user_pcb(1, 1U, P1_BASE, P1_TOP);
+    init_user_pcb(2, 2U, P2_BASE, P2_TOP);
 }

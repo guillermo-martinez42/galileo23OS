@@ -54,26 +54,35 @@ QEMU_CFLAGS := -mcpu=cortex-a15 -marm -nostdlib -nostartfiles \
 # Source file groups
 # ---------------------------------------------------------------
 
-# Shared library (compiled into every binary — OS and user processes)
-LIB_SRCS := $(LIB_DIR)/stdio.c \
-            $(LIB_DIR)/string.c
+# Kernel-only stdio (PRINT + UART) — NOT linked into user binaries
+# Phase 2 enforces a clean user/kernel break: user code only reaches the
+# UART through sys_write() in include/user_syscalls.h.
+KERNEL_STDIO := $(LIB_DIR)/stdio.c
+
+# Shared library safe for both kernel and user (no privileged I/O)
+LIB_SRCS := $(LIB_DIR)/string.c
 
 # Platform-independent kernel core
-CORE_SRCS := $(CORE_DIR)/sched.c \
-             $(CORE_DIR)/pcb.c
+CORE_SRCS := $(CORE_DIR)/sched.c   \
+             $(CORE_DIR)/pcb.c     \
+             $(CORE_DIR)/syscall.c \
+             $(CORE_DIR)/fault.c
 
-# OS kernel source sets — startup + core + platform driver + lib
+# OS kernel source sets — startup + core + platform driver + lib + stdio
 BBB_OS_SRCS := $(BOOT_DIR)/beagle_startup.s \
                $(CORE_SRCS)                  \
                $(DRV_BBB)/am335x_timer.c     \
+               $(KERNEL_STDIO)               \
                $(LIB_SRCS)
 
 VIRT_OS_SRCS := $(BOOT_DIR)/qemu_startup.s \
                 $(CORE_SRCS)                \
                 $(DRV_QEMU)/virt_timer.c    \
+                $(KERNEL_STDIO)             \
                 $(LIB_SRCS)
 
-# User-process source sets (kernel and driver code excluded — no privilege)
+# User-process source sets — clean break: no kernel stdio, only user
+# syscall wrappers (header-only) and the shared utility lib.
 P1_SRCS := $(USR_DIR)/P1/main.c $(LIB_SRCS)
 P2_SRCS := $(USR_DIR)/P2/main.c $(LIB_SRCS)
 
