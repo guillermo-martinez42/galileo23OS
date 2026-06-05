@@ -7,21 +7,21 @@
 
 #include "user_syscalls.h"
 
-static const char prefix[] = "From P2: ";    /* 9 chars, no NUL */
+static const char prefix[] = "----From P2: ";    /* 13 chars, no NUL */
 
 int main(void)
 {
-    /* "From P2: L\n"  →  13 bytes */
-    char buf[14];
+    /* "----From P2: L\n"  →  17 bytes */
+    char buf[18];
     int  i;
     char c = 'a';
 
     for (i = 0; i < 13; i++) buf[i] = prefix[i];
-    buf[14] = '\n';
+    buf[17] = '\n';
 
     while (1) {
         buf[13] = c;
-        sys_write(1, buf, 15);
+        sys_write(1, buf, 18);
 
         c = (c == 'z') ? 'a' : (char)(c + 1);
 
